@@ -16,6 +16,7 @@ use ::std::ops::Deref;
 // Enumerations
 //==============================================================================
 
+/// DPDK Buffer
 #[derive(Clone, Debug)]
 pub enum DPDKBuf {
     External(Bytes),
@@ -33,10 +34,12 @@ impl Buffer for DPDKBuf {
         DPDKBuf::External(Bytes::empty())
     }
 
+    /// Creates a [DPDKBuf] from a [u8] slice.
     fn from_slice(bytes: &[u8]) -> Self {
         DPDKBuf::External(Bytes::from_slice(bytes))
     }
 
+    /// Removes `len` bytes at the beginning of the target [DPDKBuf].
     fn adjust(&mut self, num_bytes: usize) {
         match self {
             DPDKBuf::External(ref mut buf) => buf.adjust(num_bytes),
@@ -44,6 +47,7 @@ impl Buffer for DPDKBuf {
         }
     }
 
+    /// Removes `len` bytes at the end of the target [DPDKBuf].
     fn trim(&mut self, num_bytes: usize) {
         match self {
             DPDKBuf::External(ref mut buf) => buf.trim(num_bytes),

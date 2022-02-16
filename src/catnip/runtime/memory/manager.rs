@@ -115,17 +115,11 @@ impl MemoryManager {
     }
 
     pub fn make_buffer(&self, packet: *mut rte_mbuf) -> DPDKBuf {
-        DPDKBuf::Managed(Mbuf {
-            ptr: packet,
-            mm: self.clone(),
-        })
+        DPDKBuf::Managed(Mbuf::new(packet, self.clone()))
     }
 
     pub fn clone_mbuf(&self, mbuf: &Mbuf) -> Mbuf {
-        Mbuf {
-            ptr: self.inner.clone_mbuf(mbuf.ptr),
-            mm: self.clone(),
-        }
+        Mbuf::new(self.inner.clone_mbuf(mbuf.get_ptr()), self.clone())
     }
 
     /// Given a pointer and length into a body `mbuf`, return a fresh indirect `mbuf` that points to
@@ -135,10 +129,7 @@ impl MemoryManager {
         let body_clone = self.inner.clone_mbuf(mbuf_ptr);
 
         // Wrap the mbuf first so we free it on early exit.
-        let mut mbuf = Mbuf {
-            ptr: body_clone,
-            mm: self.clone(),
-        };
+        let mut mbuf = Mbuf::new(body_clone, self.clone());
 
         let orig_ptr = mbuf.data_ptr();
         let orig_len = mbuf.len();
@@ -233,10 +224,7 @@ impl MemoryManager {
             (*mbuf_ptr).data_len = num_bytes as u16;
             (*mbuf_ptr).pkt_len = num_bytes as u32;
         }
-        Mbuf {
-            ptr: mbuf_ptr,
-            mm: self.clone(),
-        }
+        Mbuf::new(mbuf_ptr, self.clone())
     }
 
     pub fn alloc_body_mbuf(&self) -> Mbuf {
@@ -247,10 +235,7 @@ impl MemoryManager {
             (*mbuf_ptr).data_len = num_bytes as u16;
             (*mbuf_ptr).pkt_len = num_bytes as u32;
         }
-        Mbuf {
-            ptr: mbuf_ptr,
-            mm: self.clone(),
-        }
+        Mbuf::new(mbuf_ptr, self.clone())
     }
 
     pub fn alloc_sgarray(&self, size: usize) -> dmtr_sgarray_t {

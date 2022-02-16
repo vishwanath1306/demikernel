@@ -81,7 +81,7 @@ impl NetworkRuntime for DPDKRuntime {
                 };
                 unsafe {
                     assert_eq!(
-                        rte_pktmbuf_chain(header_mbuf.ptr(), body_mbuf.into_raw()),
+                        rte_pktmbuf_chain(header_mbuf.get_ptr(), body_mbuf.into_raw()),
                         0
                     );
                 }

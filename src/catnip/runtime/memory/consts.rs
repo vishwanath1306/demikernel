@@ -5,7 +5,7 @@
 // Imports
 //==============================================================================
 
-use dpdk_rs::{
+use ::dpdk_rs::{
     RTE_MBUF_DEFAULT_BUF_SIZE,
     RTE_PKTMBUF_HEADROOM,
 };
