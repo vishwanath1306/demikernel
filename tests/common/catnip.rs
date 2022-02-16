@@ -9,9 +9,12 @@ use ::catnip::{
 use ::dpdk_rs::load_mlx_driver;
 use demikernel::catnip::{
     dpdk::initialize_dpdk,
-    memory::DPDKBuf,
-    runtime::DPDKRuntime,
+    runtime::{
+        memory::DPDKBuf,
+        DPDKRuntime,
+    },
 };
+use runtime::memory::Buffer;
 
 //==============================================================================
 // Test
@@ -56,15 +59,8 @@ impl Test {
     }
 
     pub fn mkbuf(&self, fill_char: u8) -> DPDKBuf {
-        assert!(self.config.0.buffer_size <= self.config.0.mss);
-        let mut pktbuf = self.libos.rt().alloc_body_mbuf();
-        let pktbuf_slice = unsafe { pktbuf.slice_mut() };
-        for j in 0..self.config.0.buffer_size {
-            pktbuf_slice[j] = fill_char;
-        }
-        drop(pktbuf_slice);
-        pktbuf.trim(pktbuf.len() - self.config.0.buffer_size);
-        DPDKBuf::Managed(pktbuf)
+        let a: Vec<u8> = (0..self.config.0.buffer_size).map(|_| fill_char).collect();
+        DPDKBuf::from_slice(&a)
     }
 
     pub fn bufcmp(a: DPDKBuf, b: DPDKBuf) -> bool {

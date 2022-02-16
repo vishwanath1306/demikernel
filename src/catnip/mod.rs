@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 pub mod dpdk;
-pub mod memory;
 pub mod runtime;
 
 //==============================================================================

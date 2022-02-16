@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-mod memory;
+pub mod memory;
 mod network;
 mod scheduler;
 mod utils;
@@ -10,10 +10,9 @@ mod utils;
 // Imports
 //==============================================================================
 
-use self::scheduler::TimerRc;
-use crate::catnip::memory::{
-    Mbuf,
-    MemoryManager,
+use self::{
+    memory::MemoryManager,
+    scheduler::TimerRc,
 };
 use ::catnip::timer::Timer;
 use ::catwalk::Scheduler;
@@ -48,21 +47,21 @@ use ::std::{
 //==============================================================================
 
 struct Inner {
-    timer: TimerRc,
-    memory_manager: MemoryManager,
-    link_addr: MacAddress,
-    ipv4_addr: Ipv4Addr,
     rng: SmallRng,
-    arp_options: ArpConfig,
-    tcp_options: TcpConfig,
-    udp_options: UdpConfig,
-
-    dpdk_port_id: u16,
 }
 
 #[derive(Clone)]
 pub struct DPDKRuntime {
     inner: Rc<RefCell<Inner>>,
+
+    memory_manager: MemoryManager,
+    timer: TimerRc,
+    dpdk_port_id: u16,
+    link_addr: MacAddress,
+    ipv4_addr: Ipv4Addr,
+    arp_options: ArpConfig,
+    tcp_options: TcpConfig,
+    udp_options: UdpConfig,
     scheduler: Scheduler,
 }
 
@@ -107,34 +106,19 @@ impl DPDKRuntime {
 
         let udp_options = UdpConfig::new(Some(udp_checksum_offload), Some(udp_checksum_offload));
 
-        let inner = Inner {
+        let inner = Inner { rng };
+        Self {
+            inner: Rc::new(RefCell::new(inner)),
             timer: TimerRc(Rc::new(Timer::new(now))),
+            memory_manager,
+            scheduler: Scheduler::default(),
+            dpdk_port_id,
             link_addr,
             ipv4_addr,
-            rng,
             arp_options,
             tcp_options,
             udp_options,
-
-            dpdk_port_id,
-            memory_manager,
-        };
-        Self {
-            inner: Rc::new(RefCell::new(inner)),
-            scheduler: Scheduler::default(),
         }
-    }
-
-    pub fn alloc_body_mbuf(&self) -> Mbuf {
-        self.inner.borrow().memory_manager.alloc_body_mbuf()
-    }
-
-    pub fn port_id(&self) -> u16 {
-        self.inner.borrow().dpdk_port_id
-    }
-
-    pub fn memory_manager(&self) -> MemoryManager {
-        self.inner.borrow().memory_manager.clone()
     }
 }
 

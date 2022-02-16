@@ -5,12 +5,12 @@
 // Imports
 //==============================================================================
 
-use crate::catnip::{
+use crate::catnip::runtime::{
     memory::{
-        MemoryConfig,
+        consts::DEFAULT_MAX_BODY_SIZE,
         MemoryManager,
     },
-    runtime::DPDKRuntime,
+    DPDKRuntime,
 };
 use ::anyhow::{
     bail,
@@ -112,12 +112,13 @@ pub fn initialize_dpdk(
         nb_ports
     );
 
-    let mut memory_config = MemoryConfig::default();
-    if use_jumbo_frames {
-        memory_config.max_body_size =
-            (RTE_ETHER_MAX_JUMBO_FRAME_LEN + RTE_PKTMBUF_HEADROOM) as usize;
-    }
-    let memory_manager = MemoryManager::new(memory_config)?;
+    let max_body_size: usize = if use_jumbo_frames {
+        (RTE_ETHER_MAX_JUMBO_FRAME_LEN + RTE_PKTMBUF_HEADROOM) as usize
+    } else {
+        DEFAULT_MAX_BODY_SIZE
+    };
+
+    let memory_manager = MemoryManager::new(max_body_size)?;
 
     let owner = RTE_ETH_DEV_NO_OWNER as u64;
     let port_id = unsafe { rte_eth_find_next_owned_by(0, owner) as u16 };

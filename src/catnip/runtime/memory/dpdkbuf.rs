@@ -26,24 +26,15 @@ pub enum DPDKBuf {
 // Trait Implementations
 //==============================================================================
 
-impl Deref for DPDKBuf {
-    type Target = [u8];
-
-    fn deref(&self) -> &[u8] {
-        match self {
-            DPDKBuf::External(ref buf) => buf.deref(),
-            DPDKBuf::Managed(ref mbuf) => mbuf.deref(),
-        }
-    }
-}
-
+/// Buffer Trait Implementation for DPDK Buffers
 impl Buffer for DPDKBuf {
+    /// Creates an empty [DPDKBuf].
     fn empty() -> Self {
         DPDKBuf::External(Bytes::empty())
     }
 
-    fn from_slice(_: &[u8]) -> Self {
-        todo!()
+    fn from_slice(bytes: &[u8]) -> Self {
+        DPDKBuf::External(Bytes::from_slice(bytes))
     }
 
     fn adjust(&mut self, num_bytes: usize) {
@@ -57,6 +48,18 @@ impl Buffer for DPDKBuf {
         match self {
             DPDKBuf::External(ref mut buf) => buf.trim(num_bytes),
             DPDKBuf::Managed(ref mut mbuf) => mbuf.trim(num_bytes),
+        }
+    }
+}
+
+/// De-Reference Trait Implementation for DPDK Buffers
+impl Deref for DPDKBuf {
+    type Target = [u8];
+
+    fn deref(&self) -> &[u8] {
+        match self {
+            DPDKBuf::External(ref buf) => buf.deref(),
+            DPDKBuf::Managed(ref mbuf) => mbuf.deref(),
         }
     }
 }
