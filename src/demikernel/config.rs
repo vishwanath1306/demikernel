@@ -5,7 +5,6 @@ use ::anyhow::{
     format_err,
     Error,
 };
-use ::catnip::logging;
 use ::clap::{
     App,
     Arg,
@@ -156,8 +155,6 @@ impl Config {
     }
 
     pub fn initialize(argc: c_int, argv: *mut *mut c_char) -> Result<Self, Error> {
-        logging::initialize();
-
         let config_path = match std::env::var("CONFIG_PATH") {
             Ok(s) => s,
             Err(..) => {

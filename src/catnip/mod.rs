@@ -1,21 +1,22 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-pub mod dpdk;
-pub mod runtime;
+mod dpdk;
+mod runtime;
 
 //==============================================================================
 // Imports
 //==============================================================================
 
-use crate::{
-    catnip::runtime::DPDKRuntime,
-    demikernel::{
-        config::Config,
-        network::{
-            libos_network_init,
-            NetworkLibOS,
-        },
+use self::{
+    dpdk::initialize_dpdk,
+    runtime::DPDKRuntime,
+};
+use crate::demikernel::{
+    config::Config,
+    network::{
+        libos_network_init,
+        NetworkLibOS,
     },
 };
 use ::anyhow::Error;
@@ -28,6 +29,7 @@ use ::catnip::{
         ipv4::Ipv4Endpoint,
     },
 };
+use ::dpdk_rs::load_mlx_driver;
 use ::libc::{
     c_char,
     c_int,
@@ -50,10 +52,22 @@ use ::std::{
     net::Ipv4Addr,
     slice,
 };
+use std::ops::{
+    Deref,
+    DerefMut,
+};
 
 thread_local! {
     static LIBOS: RefCell<Option<LibOS<DPDKRuntime>>> = RefCell::new(None);
 }
+
+//==============================================================================
+// Exports
+//==============================================================================
+
+pub use self::runtime::memory::DPDKBuf;
+
+pub struct CatnipLibos(LibOS<DPDKRuntime>);
 
 //==============================================================================
 // Standalone Functions
@@ -72,28 +86,7 @@ fn with_libos<T>(f: impl FnOnce(&mut LibOS<DPDKRuntime>) -> T) -> T {
 
 #[no_mangle]
 pub extern "C" fn dmtr_init(argc: c_int, argv: *mut *mut c_char) -> c_int {
-    catnip_init(argc, argv)
-}
-
-pub fn catnip_init(argc: c_int, argv: *mut *mut c_char) -> c_int {
-    logging::initialize();
-    let r: Result<_, Error> = try {
-        // Load config file.
-        let config = Config::initialize(argc, argv)?;
-
-        let rt = self::dpdk::initialize_dpdk(
-            config.local_ipv4_addr,
-            &config.eal_init_args(),
-            config.arp_table(),
-            config.disable_arp,
-            config.use_jumbo_frames,
-            config.mtu,
-            config.mss,
-            config.tcp_checksum_offload,
-            config.udp_checksum_offload,
-        )?;
-        LibOS::new(rt)?
-    };
+    let r: Result<_, Error> = catnip_init(Some(argc), Some(argv));
 
     let libos = match r {
         Ok(libos) => libos,
@@ -106,7 +99,7 @@ pub fn catnip_init(argc: c_int, argv: *mut *mut c_char) -> c_int {
     LIBOS.with(move |l| {
         let mut tls_libos = l.borrow_mut();
         assert!(tls_libos.is_none());
-        *tls_libos = Some(libos);
+        *tls_libos = Some(libos.0);
     });
 
     libos_network_init(NetworkLibOS::new(
@@ -123,7 +116,7 @@ pub fn catnip_init(argc: c_int, argv: *mut *mut c_char) -> c_int {
         catnip_wait_any,
         catnip_poll,
         catnip_pop,
-        catnip_sgaalloc,
+        catnip_sgalloc,
         catnip_sgafree,
         catnip_getsockname,
     ));
@@ -131,16 +124,52 @@ pub fn catnip_init(argc: c_int, argv: *mut *mut c_char) -> c_int {
     0
 }
 
+pub fn catnip_init(
+    argc: Option<c_int>,
+    argv: Option<*mut *mut c_char>,
+) -> Result<CatnipLibos, Error> {
+    load_mlx_driver();
+    logging::initialize();
+
+    let config = match std::env::var("CONFIG_PATH") {
+        Ok(s) => Config::new(s),
+        Err(..) => Config::initialize(argc.unwrap(), argv.unwrap()).unwrap(),
+    };
+
+    let rt = initialize_dpdk(
+        config.local_ipv4_addr,
+        &config.eal_init_args(),
+        config.arp_table(),
+        config.disable_arp,
+        config.use_jumbo_frames,
+        config.mtu,
+        config.mss,
+        config.tcp_checksum_offload,
+        config.udp_checksum_offload,
+    )?;
+
+    Ok(CatnipLibos(LibOS::new(rt)?))
+}
+
+impl Deref for CatnipLibos {
+    type Target = LibOS<DPDKRuntime>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CatnipLibos {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 //==============================================================================
 // socket
 //==============================================================================
 
-pub fn catnip_socket(
-    qd_out: *mut c_int,
-    domain: c_int,
-    socket_type: c_int,
-    protocol: c_int,
-) -> c_int {
+fn catnip_socket(qd_out: *mut c_int, domain: c_int, socket_type: c_int, protocol: c_int) -> c_int {
     with_libos(|libos| match libos.socket(domain, socket_type, protocol) {
         Ok(fd) => {
             unsafe { *qd_out = fd.into() };
@@ -371,7 +400,7 @@ fn catnip_wait_any(
 // sgaalloc
 //==============================================================================
 
-fn catnip_sgaalloc(size: libc::size_t) -> dmtr_sgarray_t {
+fn catnip_sgalloc(size: libc::size_t) -> dmtr_sgarray_t {
     with_libos(|libos| libos.rt().alloc_sgarray(size))
 }
 

@@ -39,7 +39,7 @@ type wait_any_fn = fn(*mut dmtr_qresult_t, *mut c_int, *mut dmtr_qtoken_t, c_int
 
 type poll_fn = fn(*mut dmtr_qresult_t, dmtr_qtoken_t) -> c_int;
 
-type sgaalloc_fn = fn(libc::size_t) -> dmtr_sgarray_t;
+type sgalloc_fn = fn(libc::size_t) -> dmtr_sgarray_t;
 type sgafree_fn = fn(*mut dmtr_sgarray_t) -> c_int;
 type getsockname_fn = fn(c_int, *mut sockaddr, *mut socklen_t) -> c_int;
 
@@ -59,7 +59,7 @@ pub struct NetworkLibOS {
     wait_any: wait_any_fn,
     poll: poll_fn,
     pop: pop_fn,
-    sgaalloc: sgaalloc_fn,
+    sgalloc: sgalloc_fn,
     sgafree: sgafree_fn,
     getsockname: getsockname_fn,
 }
@@ -79,7 +79,7 @@ impl NetworkLibOS {
         wait_any: wait_any_fn,
         poll: poll_fn,
         pop: pop_fn,
-        sgaalloc: sgaalloc_fn,
+        sgalloc: sgalloc_fn,
         sgafree: sgafree_fn,
         getsockname: getsockname_fn,
     ) -> Self {
@@ -97,7 +97,7 @@ impl NetworkLibOS {
             wait_any,
             poll,
             pop,
-            sgaalloc,
+            sgalloc,
             sgafree,
             getsockname,
         }
@@ -275,7 +275,7 @@ pub extern "C" fn dmtr_wait_any(
 
 #[no_mangle]
 pub extern "C" fn dmtr_sgaalloc(size: libc::size_t) -> dmtr_sgarray_t {
-    with_libos(|libos| (libos.sgaalloc)(size))
+    with_libos(|libos| (libos.sgalloc)(size))
 }
 
 //==============================================================================

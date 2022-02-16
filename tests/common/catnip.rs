@@ -2,17 +2,11 @@
 // Licensed under the MIT license.
 
 use super::config::TestConfig;
-use ::catnip::{
-    libos::LibOS,
-    protocols::ipv4::Ipv4Endpoint,
-};
-use ::dpdk_rs::load_mlx_driver;
+use ::catnip::protocols::ipv4::Ipv4Endpoint;
 use demikernel::catnip::{
-    dpdk::initialize_dpdk,
-    runtime::{
-        memory::DPDKBuf,
-        DPDKRuntime,
-    },
+    catnip_init,
+    CatnipLibos,
+    DPDKBuf,
 };
 use runtime::memory::Buffer;
 
@@ -22,26 +16,13 @@ use runtime::memory::Buffer;
 
 pub struct Test {
     config: TestConfig,
-    pub libos: LibOS<DPDKRuntime>,
+    pub libos: CatnipLibos,
 }
 
 impl Test {
     pub fn new() -> Self {
-        load_mlx_driver();
         let config: TestConfig = TestConfig::new();
-        let rt = initialize_dpdk(
-            config.0.local_ipv4_addr,
-            &config.0.eal_init_args(),
-            config.0.arp_table(),
-            config.0.disable_arp,
-            config.0.use_jumbo_frames,
-            config.0.mtu,
-            config.0.mss,
-            config.0.tcp_checksum_offload,
-            config.0.udp_checksum_offload,
-        )
-        .unwrap();
-        let libos = LibOS::new(rt).unwrap();
+        let libos = catnip_init(None, None).unwrap();
 
         Self { config, libos }
     }
