@@ -25,8 +25,8 @@ use ::yaml_rust::{
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub buffer_size: usize,
-    pub config_obj: Yaml,
+    buffer_size: usize,
+    config_obj: Yaml,
     pub mtu: u16,
     pub mss: usize,
     pub disable_arp: bool,
@@ -141,4 +141,12 @@ impl Config {
             config_obj: config_obj.clone(),
         }
     }
+
+    pub fn get_config_obj(self) -> Yaml{
+        self.config_obj
+    }
+
+    pub fn get_buffer_size(self) -> usize{
+        self.buffer_size
+    } 
 }

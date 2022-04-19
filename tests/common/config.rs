@@ -32,7 +32,7 @@ impl TestConfig {
     }
 
     fn addr(&self, k1: &str, k2: &str) -> Result<Ipv4Endpoint, Error> {
-        let addr = &self.0.config_obj[k1][k2];
+        let addr = &self.0.get_config_obj()[k1][k2];
         let host_s = addr["host"]
             .as_str()
             .ok_or(format_err!("Missing host"))

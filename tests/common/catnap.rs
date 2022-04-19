@@ -41,15 +41,15 @@ impl Test {
     }
 
     pub fn get_buffer_size(&self) -> usize {
-        self.config.0.buffer_size
+        self.config.0.get_buffer_size()
     }
 
     pub fn mkbuf(&self, fill_char: u8) -> Vec<u8> {
-        assert!(self.config.0.buffer_size <= self.config.0.mss);
+        assert!(self.get_buffer_size() <= self.config.0.mss);
 
-        let mut data: Vec<u8> = Vec::<u8>::with_capacity(self.config.0.buffer_size);
+        let mut data: Vec<u8> = Vec::<u8>::with_capacity(self.get_buffer_size());
 
-        for _ in 0..self.config.0.buffer_size {
+        for _ in 0..self.get_buffer_size() {
             data.push(fill_char);
         }
 
